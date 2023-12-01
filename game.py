@@ -9,6 +9,11 @@ class Game:
     def increase_gold(self):
         self.gold += self.productivity
 
-    def new_mine(self, mine: Mine):
-        self.mines.append(mine)
-        self.productivity += mine.produce()
+    def new_mines(self, mine: Mine, num: int) -> bool:
+        cost: int = mine.cost * num
+        if self.gold >= cost:
+            self.gold -= cost
+            self.productivity += mine.produce() * num
+            return True
+        else:
+            return False

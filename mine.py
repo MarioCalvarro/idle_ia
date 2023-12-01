@@ -1,8 +1,5 @@
-from game import Game
-
 class Mine:
-    def __init__(self, game: Game, cost: int, productivity: int):
-        self.game = game
+    def __init__(self, cost: int, productivity: int):
         self.cost = cost
         self.productivity = productivity
 
