@@ -21,7 +21,7 @@ MINES: list[Mine] = [Mine(15, 1), Mine(100, 5), Mine(300, 20), Mine(2000, 100), 
 #              que dependa de su coste (las minas baratas tendrán más variabilidad)
 
 class IdleIndividual():
-    BASE_RANGE_MUTATION: int = 10
+    BASE_RANGE_MUTATION: int = 5
 
     def __init__(self, seconds: int, initial: bool):
         if initial:
@@ -37,8 +37,10 @@ class IdleIndividual():
         l: list[list[int]] = []
         for i in range(seconds):
             aux: list[int] = []
-            for _ in range(len(MINES)):     # One for each type of mine
-                number: int = random.randint(0, 1) * i * 1 // seconds   # TODO: CHANGE Initially buy 0 to 2 mines max
+            for ii in range(len(MINES)):     # One for each type of mine
+                # TODO: hacer exponencial inverso
+                number: int = random.randint(0, 1) * i * 2 // seconds  # TODO: CHANGE Initially buy 0 to 2 mines max
+                number = int(number * 2**(-(ii+1)))
                 aux.append(number)
 
             l.append(aux)
@@ -57,12 +59,13 @@ class IdleIndividual():
 
 
     def mutate_index(self, index: int):
-        new_base_range_mutation: int = self.BASE_RANGE_MUTATION * index // 90 
-        for i in range(len(MINES)): 
-            new_base_range_mutation //= 2
-            prob: float = 1 / (i+1) * 0.5
+        new_base_range_mutation: int = self.BASE_RANGE_MUTATION * index // self.seconds
+        for i in range(len(MINES)):
+            new_base_range_mutation //= 4
+            prob: float = 2**(-2*(i+1))
             if prob > random.uniform(0, 1):
                 self.values[index][i] += random.randint(-new_base_range_mutation, new_base_range_mutation)
+                self.values[index][i] = max(0, self.values[index][i])
 
 
     def cross(self, other: 'IdleIndividual') -> 'IdleIndividual':
@@ -124,8 +127,9 @@ class IdleGeneticProblem():
         num_parents = round(self.size * proportion_cross)
         num_parents = int(num_parents if num_parents % 2 == 0 else num_parents - 1)
         num_direct = self.size - num_parents
-        for _ in range(num_gens):
+        for i in range(num_gens):
             self.population = self.new_generation(num_tour, num_parents, num_direct)
+            print(f"Indidual from {i} generation: {self.population[random.randint(0, self.size-1)].values}")
 
         best_ind: IdleIndividual = max(self.population, key = self.fitness)
         #best = problema_genetico.decodifica(best_cr)

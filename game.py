@@ -10,6 +10,9 @@ class Game:
         self.gold += self.productivity
 
     def new_mines(self, mine: Mine, num: int) -> bool:
+        if num < 0:
+            return False
+
         cost: int = mine.cost * num
         if self.gold >= cost:
             self.gold -= cost
