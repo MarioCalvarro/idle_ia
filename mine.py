@@ -3,6 +3,9 @@ class Mine:
         self.cost = cost
         self.productivity = productivity
 
+    def r_cost(self):
+        return self.cost
+
     def produce(self):
         return self.productivity
 

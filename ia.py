@@ -1,4 +1,6 @@
 import random
+import math
+import threading
 from typing import Tuple
 from mine import Mine
 from game import Game
@@ -21,57 +23,75 @@ MINES: list[Mine] = [Mine(15, 1), Mine(100, 5), Mine(300, 20), Mine(2000, 100), 
 #              que dependa de su coste (las minas baratas tendrán más variabilidad)
 
 class IdleIndividual():
-    BASE_RANGE_MUTATION: int = 5
+    BASE_RANGE_MUTATION = 1.04
 
     def __init__(self, seconds: int, initial: bool):
+        self.seconds = seconds
+        self.fitness: int = -2
         if initial:
-            self.values: list[list[int]] = self.create_new_values(seconds)
+            self.values: list[list[int]] = self.create_new_values()
         else:
             self.values: list[list[int]] = [[]] * seconds
 
-        self.seconds = seconds
-        self.fitness: int = -2
 
 
-    def create_new_values(self, seconds: int):
+    def create_new_values(self):
         l: list[list[int]] = []
-        for i in range(seconds):
+        for i in range(self.seconds - 20):
             aux: list[int] = []
             for ii in range(len(MINES)):     # One for each type of mine
-                # TODO: hacer exponencial inverso
-                number: int = random.randint(0, 1) * i * 2 // seconds  # TODO: CHANGE Initially buy 0 to 2 mines max
-                number = int(number * 2**(-(ii+1)))
+                #number: int = int(random.randint(0, 1) * 1.4 ** (0.07 * (i-100)))
+                number: int = int(random.randint(0, 1) * 1.04 ** (i-70))
+                number = round(number * 2**(-20*ii))
                 aux.append(number)
 
             l.append(aux)
+        for i in range(20):
+            aux = [0] * 6
+            l.append(aux)
+
         return l
 
 
     def mutation(self):
-        number_mutations: int = len(self.values) // 10
-        to_mutate: list[int] = [] 
+        prop_mut = 0.01
+        if 0.01 > random.uniform(0, 1):
+            prop_mut = 0.5
+        number_mutations: int = round(len(self.values) * prop_mut)
+        to_mutate: list[int] = []
         
         for _ in range(number_mutations):
-            to_mutate.append(random.randint(0, len(self.values) - 1))
+            to_mutate.append(random.randint(0, len(self.values) - 20))
         
         for index in to_mutate:
             self.mutate_index(index)
 
 
     def mutate_index(self, index: int):
-        new_base_range_mutation: int = self.BASE_RANGE_MUTATION * index // self.seconds
-        for i in range(len(MINES)):
-            new_base_range_mutation //= 4
-            prob: float = 2**(-2*(i+1))
-            if prob > random.uniform(0, 1):
-                self.values[index][i] += random.randint(-new_base_range_mutation, new_base_range_mutation)
-                self.values[index][i] = max(0, self.values[index][i])
+        #new_base_range_mutation: int = round(self.BASE_RANGE_MUTATION ** (0.072 * index))
+        #new_base_range_mutation: int = round(self.BASE_RANGE_MUTATION ** (index))
+        if 0.99 > random.uniform(0, 1):
+            for i in range(len(MINES)):
+                prob: float = (1 - 2 ** (-index)) / 2**(100*(i+1))
+                if prob > random.uniform(0, 1):
+                    self.values[index][i] += round(self.values[index][i] * 0.5);
+                    # ra: int = random.randint(-new_base_range_mutation, new_base_range_mutation)
+                    # #print(f"{prob} {index} {i} {new_base_range_mutation} {ra}")
+                    # self.values[index][i] += ra
+                    # self.values[index][i] = max(0, self.values[index][i])
 
+                # new_base_range_mutation = round(new_base_range_mutation / (2 ** (20*(i+1))))
+        else:
+            self.values = [[0, 0, 0, 0, 0, 0]] * self.seconds
 
     def cross(self, other: 'IdleIndividual') -> 'IdleIndividual':
         l: int = len(self.values) # Is equal in both
         new_ind: IdleIndividual = IdleIndividual(self.seconds, False)
-        new_ind.values = self.values[0:l//2] + other.values[l//2:l]
+        for i in range(self.seconds):
+            if 0.5 > random.uniform(0, 1):
+                new_ind.values[i] = self.values[i][0:l//3] + other.values[i][l//3:2*l//3] + self.values[i][2*l//3:l]
+            else:
+                new_ind.values[i] = other.values[i][0:l//3] + self.values[i][l//3:2*l//3] + other.values[i][2*l//3:l]
         return new_ind
 
 
@@ -101,6 +121,7 @@ class IdleGeneticProblem():
         self.size = size    # Size of the population
         self.seconds = seconds
         self.population = self.starting_generation()
+        self.best_before = IdleIndividual(seconds, True)
 
     def decode(self):
         """Return the phenotype given a genotype"""
@@ -122,14 +143,31 @@ class IdleGeneticProblem():
         return individual.evaluation()
 
 
+    def evaluate_population(self):
+        """Parallel evaluation of population"""
+        threads = []
+        for ind in self.population:
+            thread = threading.Thread(target=ind.evaluation, args=())
+            thread.start()
+            threads.append(thread)
+
+        # Wait for all threads to complete
+        for thread in threads:
+            thread.join() 
+
+
     def genetic_algorithm(self, num_tour: int, num_gens: int, proportion_cross: float) -> Tuple[IdleIndividual, int]:
         """Return best buying sequence"""
         num_parents = round(self.size * proportion_cross)
-        num_parents = int(num_parents if num_parents % 2 == 0 else num_parents - 1)
+        num_parents = round(num_parents if num_parents % 2 == 0 else num_parents - 1)
         num_direct = self.size - num_parents
         for i in range(num_gens):
+            best_ind: IdleIndividual = max(self.population, key = self.fitness)
+            self.best_before = best_ind
+            print(f"Best from {i} generation: {best_ind.values}")
+            print(f"{math.log(best_ind.fitness, 10)}")
             self.population = self.new_generation(num_tour, num_parents, num_direct)
-            print(f"Indidual from {i} generation: {self.population[random.randint(0, self.size-1)].values}")
+            self.evaluate_population()
 
         best_ind: IdleIndividual = max(self.population, key = self.fitness)
         #best = problema_genetico.decodifica(best_cr)
@@ -140,9 +178,13 @@ class IdleGeneticProblem():
         selected: list[IdleIndividual] = []
         for _ in range(n):
             participants = random.sample(self.population, k)
-            ind_selected = max(participants, key = self.fitness)
+            if 0.8 > random.uniform(0, 1):
+                ind_selected = max(participants, key = self.fitness)
+                if ind_selected.fitness == -1 and 0.2 > random.uniform(0, 1):
+                    ind_selected = IdleIndividual(self.seconds, True) # if the ind is invalid, we create a new one
+            else:
+                ind_selected = min(participants, key = self.fitness)
             selected.append(ind_selected)
-            # poblacion.remove(seleccionado)
         return selected  
 
     def cross_parents(self, parents: list[IdleIndividual]):
