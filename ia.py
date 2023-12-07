@@ -70,19 +70,16 @@ class IdleIndividual():
     def mutate_index(self, index: int):
         #new_base_range_mutation: int = round(self.BASE_RANGE_MUTATION ** (0.072 * index))
         #new_base_range_mutation: int = round(self.BASE_RANGE_MUTATION ** (index))
-        if 0.99 > random.uniform(0, 1):
-            for i in range(len(MINES)):
-                prob: float = (1 - 2 ** (-index)) / 2**(100*(i+1))
-                if prob > random.uniform(0, 1):
-                    self.values[index][i] += round(self.values[index][i] * 0.5);
-                    # ra: int = random.randint(-new_base_range_mutation, new_base_range_mutation)
-                    # #print(f"{prob} {index} {i} {new_base_range_mutation} {ra}")
-                    # self.values[index][i] += ra
-                    # self.values[index][i] = max(0, self.values[index][i])
+        for i in range(len(MINES)):
+            prob: float = (1 - 2 ** (-index)) / 2**(100*(i+1))
+            if prob > random.uniform(0, 1):
+                self.values[index][i] += round(self.values[index][i] * 0.5);
+                # ra: int = random.randint(-new_base_range_mutation, new_base_range_mutation)
+                # #print(f"{prob} {index} {i} {new_base_range_mutation} {ra}")
+                # self.values[index][i] += ra
+                # self.values[index][i] = max(0, self.values[index][i])
 
-                # new_base_range_mutation = round(new_base_range_mutation / (2 ** (20*(i+1))))
-        else:
-            self.values = [[0, 0, 0, 0, 0, 0]] * self.seconds
+            # new_base_range_mutation = round(new_base_range_mutation / (2 ** (20*(i+1))))
 
     def cross(self, other: 'IdleIndividual') -> 'IdleIndividual':
         l: int = len(self.values) # Is equal in both
@@ -178,12 +175,9 @@ class IdleGeneticProblem():
         selected: list[IdleIndividual] = []
         for _ in range(n):
             participants = random.sample(self.population, k)
-            if 0.8 > random.uniform(0, 1):
-                ind_selected = max(participants, key = self.fitness)
-                if ind_selected.fitness == -1 and 0.2 > random.uniform(0, 1):
-                    ind_selected = IdleIndividual(self.seconds, True) # if the ind is invalid, we create a new one
-            else:
-                ind_selected = min(participants, key = self.fitness)
+            ind_selected = max(participants, key = self.fitness)
+            if ind_selected.fitness == -1 and 0.2 > random.uniform(0, 1):
+                ind_selected = IdleIndividual(self.seconds, True) # if the ind is invalid, we create a new one
             selected.append(ind_selected)
         return selected  
 
