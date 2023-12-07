@@ -16,6 +16,7 @@ for i in range(900):
         x.append(0)
 
 
+
 # plotting the points  
 plt.plot(t, x) 
   
