@@ -1,26 +1,23 @@
 import random
 import math
-import threading
-from typing import Tuple
 from mine import Mine
 from game import Game
 
 MINES: list[Mine] = [Mine(15, 1), Mine(100, 5), Mine(300, 20), Mine(2000, 100), Mine(15000, 700), Mine(250000, 10000)]
 
-# TODO: Change numbers to constants
-
 # Representación: Array de arrays. Cada segundo será un vector con len(MINES) elementos (6 por defecto).
 #                 Cada elemento es un entero que representa el número de minas de ese
 #                 tipo que se compran en ese segundo
 #
-# Población inicial: Aleatoria con valores bajos
-# Función de evaluación: Si intenta comprar algo imposible -> -1
-#                        Si llega al final -> el total de oro que tenga al final
+# Población inicial: Aleatoria con crecimiento exponencial
+# Función de evaluación: Si intenta comprar algo imposible -> lo hacemos posible, pero 
+#                       añadimos un multiplicador que disminuya el fitness al final
+#                        Al llegar al final -> el total de oro que tenga al final
 # Operadores:
 #  * Selección: Por torneo probabilística
-#  * Cruze: Dividir cada vector de la matriz en dos y elegir que padre tendrá la primera mitad de dicha particición
-#  * Mutación: Elegir un 10% de los segundos y sobre cada uno sumar o restar a cada mina una cantidad
-#              que dependa de su coste (las minas baratas tendrán más variabilidad)
+#  * Cruze: Dividir cada vector de la matriz en tres y elegir que padre tendrá cada tercio
+#  * Mutación: Elegir un 0.2% de los segundos y sobre cada mutar con una probabilidad cada cantidad
+#              multiplicando por 0.5.
 
 class IdleIndividual():
     BASE_RANGE_MUTATION = 1.04
@@ -36,17 +33,11 @@ class IdleIndividual():
 
 
     def create_new_values(self):
-        
+        """Construct the initial list of values of the individual"""        
         l: list[list[int]] = []
-        ##for i in range(self.seconds):
-          ##  aux: list[int] = []
-            ##aux=[0,0,0,0,0,0]
-            ##l.append(aux)
-        ##return l
         for i in range(self.seconds - 20):
             aux: list[int] = []
             for ii in range(len(MINES)):     # One for each type of mine
-                #number: int = int(random.randint(0, 1) * 1.4 ** (0.07 * (i-100)))
                 number: int = int(random.randint(0, 1) * 1.045 **(i-90))
                 number = round(number * 3**(-6.5*ii))
                 aux.append(number)
@@ -61,41 +52,22 @@ class IdleIndividual():
 
     def mutation(self):
         prop_mut = 0.002
-        ##if 0.01 > random.uniform(0, 1):
-        ##    prop_mut = 0.1
         number_mutations: int = round(len(self.values) * prop_mut)
         to_mutate: list[int] = []
         
         for _ in range(number_mutations):
             to_mutate.append(random.randint(0, len(self.values) - 15))
-            
-
-
-        
+     
         for index in to_mutate:
             self.mutate_index(index)
 
 
     def mutate_index(self, index: int):
-        #new_base_range_mutation: int = round(self.BASE_RANGE_MUTATION ** (0.072 * index))
-        #new_base_range_mutation: int = round(self.BASE_RANGE_MUTATION ** (index))
         for i in range(len(MINES)):
-            ##prob: float = (1 - 2 ** (-index)) / 2**(100*(i+1))
-            prob: float = (1 - 1.005 ** (-index)) / 5**((i))
+            prob: float = (1 - 1.005 ** (-index)) / 5**i
 
             if prob > random.uniform(0, 1):
-                    #if random.uniform(0,1)>0.5:
-                        self.values[index][i] += round(self.values[index][i]*0.5)
-                   # else:
-                   #     self.values[index][i] -= round(self.values[index][i] * 0.3)
-
-                        
-                # ra: int = random.randint(-new_base_range_mutation, new_base_range_mutation)
-                # #print(f"{prob} {index} {i} {new_base_range_mutation} {ra}")
-                # self.values[index][i] += ra
-                # self.values[index][i] = max(0, self.values[index][i])
-
-            # new_base_range_mutation = round(new_base_range_mutation / (2 ** (20*(i+1))))
+                self.values[index][i] += round(self.values[index][i] * 0.5)
 
     def cross(self, other: 'IdleIndividual') -> 'IdleIndividual':
         l: int = len(self.values) # Is equal in both
@@ -113,15 +85,17 @@ class IdleIndividual():
             return self.fitness
 
         game: Game = Game()
-        for second_array in self.values:
+        mult: float = 1;
+        for i, second_array in enumerate(self.values):
             game.increase_gold()
-            for i, num_mines in enumerate(second_array):
-                valid: bool = game.new_mines(MINES[i], num_mines)
-                if not valid:
-                    self.fitness = -1
-                    return -1
+            for ii, num_mines in enumerate(second_array):
+                valid: tuple[int, bool] = game.new_mines(MINES[ii], num_mines)
+                if not valid[0]:
+                    mult *= 0.9 # Invalids have worse fitness
+                    self.values[i][ii] = valid[1]
 
-        self.fitness = game.gold
+
+        self.fitness = int(game.gold * mult)
         return self.fitness
 
 
@@ -156,37 +130,21 @@ class IdleGeneticProblem():
         return individual.evaluation()
 
 
-    def evaluate_population(self):
-        """Parallel evaluation of population"""
-        threads = []
-        for ind in self.population:
-            thread = threading.Thread(target=ind.evaluation, args=())
-            thread.start()
-            threads.append(thread)
-
-        # Wait for all threads to complete
-        for thread in threads:
-            thread.join() 
-
-
-    def genetic_algorithm(self, num_tour: int, num_gens: int, proportion_cross: float) -> Tuple[IdleIndividual, int]:
+    def genetic_algorithm(self, num_tour: int, num_gens: int, proportion_cross: float) -> tuple[IdleIndividual, int]:
         """Return best buying sequence"""
         num_parents = round(self.size * proportion_cross)
         num_parents = round(num_parents if num_parents % 2 == 0 else num_parents - 1)
         num_direct = self.size - num_parents
-        for i in range(num_gens):
+        for _ in range(num_gens):
             best_ind: IdleIndividual = max(self.population, key = self.fitness)
             self.best_before = best_ind
-            ##print(f"Best from {i} generation: {best_ind.values}")
-            if(best_ind.fitness>0):
-                print(f"{math.log(best_ind.fitness, 10)}")
-            else:
-                print (best_ind.fitness)
+            # if(best_ind.fitness > 0):
+            #     print(f"{math.log(best_ind.fitness, 10)}")
+            # else:
+            #     print (best_ind.fitness)
             self.population = self.new_generation(num_tour, num_parents, num_direct)
-            self.evaluate_population()
 
         best_ind: IdleIndividual = max(self.population, key = self.fitness)
-        #best = problema_genetico.decodifica(best_cr)
         return best_ind, self.fitness(best_ind)
 
     def tournament_selection(self, n, k):
@@ -195,23 +153,20 @@ class IdleGeneticProblem():
         for _ in range(n):
             participants = random.sample(self.population, k)
             ind_selected = max(participants, key = self.fitness)
-            ##if ind_selected.fitness == -1 and 0.2 > random.uniform(0, 1):
-            ##    ind_selected = IdleIndividual(self.seconds, True) # if the ind is invalid, we create a new one
             
             selected.append(ind_selected)
         return selected  
 
     def cross_parents(self, parents: list[IdleIndividual]):
         l = []
-        for i in range(len(parents)//2):# asumimos que la población de la que partimos tiene tamaño par
-            desc = self.cross(parents[2*i], parents[2*i + 1]) # El cruce se realiza con la función de cruce  
-                                                                         # proporcionada por el propio problema genético
-            l.append(desc[0]) # La población resultante se obtiene de cruzar el padre[0] con padre[1], padre[2] con padre[3]...
-            l.append(desc[1]) # y añadir cada par de descendientes a la nueva población
+        for i in range(len(parents)//2):    #asumimos que la población de la que partimos tiene tamaño par
+            desc = self.cross(parents[2*i], parents[2*i + 1])   #El cruce se realiza con la función de cruce proporcionada por el propio problema genético
+
+            l.append(desc[0]) #La población resultante se obtiene de cruzar el padre[0] con padre[1], padre[2] con padre[3]...
+            l.append(desc[1]) #y añadir cada par de descendientes a la nueva población
         return l
 
     def mutate_ind(self, generation: list[IdleIndividual]):
-        # problema_genetico.muta(x,prob) para todos los individuos de la poblacion.
         l = []
         for i in generation:
             self.mutate(i)
@@ -230,7 +185,7 @@ class IdleGeneticProblem():
     def starting_generation(self):
         """Return a new generation"""
         l: list[IdleIndividual] = [] 
-        for _ in range(self.size): # añadimos a la población size individuos
+        for _ in range(self.size):  #Añadimos a la población size individuos
             l.append(IdleIndividual(self.seconds, True)) 
         return l
 
