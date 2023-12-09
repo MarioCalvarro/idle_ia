@@ -36,13 +36,19 @@ class IdleIndividual():
 
 
     def create_new_values(self):
+        
         l: list[list[int]] = []
+        ##for i in range(self.seconds):
+          ##  aux: list[int] = []
+            ##aux=[0,0,0,0,0,0]
+            ##l.append(aux)
+        ##return l
         for i in range(self.seconds - 20):
             aux: list[int] = []
             for ii in range(len(MINES)):     # One for each type of mine
                 #number: int = int(random.randint(0, 1) * 1.4 ** (0.07 * (i-100)))
-                number: int = int(random.randint(0, 1) * 1.04 ** (i-70))
-                number = round(number * 2**(-20*ii))
+                number: int = int(random.randint(0, 1) * 1.045 **(i-90))
+                number = round(number * 3**(-6.5*ii))
                 aux.append(number)
 
             l.append(aux)
@@ -54,14 +60,17 @@ class IdleIndividual():
 
 
     def mutation(self):
-        prop_mut = 0.01
-        if 0.01 > random.uniform(0, 1):
-            prop_mut = 0.5
+        prop_mut = 0.002
+        ##if 0.01 > random.uniform(0, 1):
+        ##    prop_mut = 0.1
         number_mutations: int = round(len(self.values) * prop_mut)
         to_mutate: list[int] = []
         
         for _ in range(number_mutations):
-            to_mutate.append(random.randint(0, len(self.values) - 20))
+            to_mutate.append(random.randint(0, len(self.values) - 15))
+            
+
+
         
         for index in to_mutate:
             self.mutate_index(index)
@@ -71,9 +80,16 @@ class IdleIndividual():
         #new_base_range_mutation: int = round(self.BASE_RANGE_MUTATION ** (0.072 * index))
         #new_base_range_mutation: int = round(self.BASE_RANGE_MUTATION ** (index))
         for i in range(len(MINES)):
-            prob: float = (1 - 2 ** (-index)) / 2**(100*(i+1))
+            ##prob: float = (1 - 2 ** (-index)) / 2**(100*(i+1))
+            prob: float = (1 - 1.005 ** (-index)) / 5**((i))
+
             if prob > random.uniform(0, 1):
-                self.values[index][i] += round(self.values[index][i] * 0.5);
+                    #if random.uniform(0,1)>0.5:
+                        self.values[index][i] += round(self.values[index][i]*0.5)
+                   # else:
+                   #     self.values[index][i] -= round(self.values[index][i] * 0.3)
+
+                        
                 # ra: int = random.randint(-new_base_range_mutation, new_base_range_mutation)
                 # #print(f"{prob} {index} {i} {new_base_range_mutation} {ra}")
                 # self.values[index][i] += ra
@@ -161,8 +177,11 @@ class IdleGeneticProblem():
         for i in range(num_gens):
             best_ind: IdleIndividual = max(self.population, key = self.fitness)
             self.best_before = best_ind
-            print(f"Best from {i} generation: {best_ind.values}")
-            print(f"{math.log(best_ind.fitness, 10)}")
+            ##print(f"Best from {i} generation: {best_ind.values}")
+            if(best_ind.fitness>0):
+                print(f"{math.log(best_ind.fitness, 10)}")
+            else:
+                print (best_ind.fitness)
             self.population = self.new_generation(num_tour, num_parents, num_direct)
             self.evaluate_population()
 
@@ -176,8 +195,9 @@ class IdleGeneticProblem():
         for _ in range(n):
             participants = random.sample(self.population, k)
             ind_selected = max(participants, key = self.fitness)
-            if ind_selected.fitness == -1 and 0.2 > random.uniform(0, 1):
-                ind_selected = IdleIndividual(self.seconds, True) # if the ind is invalid, we create a new one
+            ##if ind_selected.fitness == -1 and 0.2 > random.uniform(0, 1):
+            ##    ind_selected = IdleIndividual(self.seconds, True) # if the ind is invalid, we create a new one
+            
             selected.append(ind_selected)
         return selected  
 
