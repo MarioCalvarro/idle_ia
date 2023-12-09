@@ -31,7 +31,6 @@ class IdleIndividual():
             self.values: list[list[int]] = [[]] * seconds
 
 
-
     def create_new_values(self):
         """Construct the initial list of values of the individual"""        
         l: list[list[int]] = []
@@ -110,6 +109,7 @@ class IdleGeneticProblem():
         self.population = self.starting_generation()
         self.best_before = IdleIndividual(seconds, True)
 
+
     def decode(self):
         """Return the phenotype given a genotype"""
 
@@ -138,10 +138,6 @@ class IdleGeneticProblem():
         for _ in range(num_gens):
             best_ind: IdleIndividual = max(self.population, key = self.fitness)
             self.best_before = best_ind
-            # if(best_ind.fitness > 0):
-            #     print(f"{math.log(best_ind.fitness, 10)}")
-            # else:
-            #     print (best_ind.fitness)
             self.population = self.new_generation(num_tour, num_parents, num_direct)
 
         best_ind: IdleIndividual = max(self.population, key = self.fitness)

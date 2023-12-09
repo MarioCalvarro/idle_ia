@@ -9,6 +9,7 @@ class Game:
         self.gold += self.productivity
 
     def new_mines(self, mine: Mine, num: int) -> tuple[int, bool]:
+        """Return the max number of mines that can be bought and if it was valid"""
         if num < 0:
             return 0, False
 
