@@ -3,7 +3,7 @@ from ia import IdleGeneticProblem
 duration = 900
 population_size = 20
 k = 3
-num_gen = 1000000
+num_gen = 200
 prop_cr = 0.8
 
 def res():

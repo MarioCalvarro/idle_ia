@@ -147,14 +147,15 @@ class IdleGeneticProblem():
         num_direct = self.size - num_parents
         for _ in range(num_gens):
             best_ind: IdleIndividual = max(self.population, key = self.fitness)
-            self.best_before = best_ind
+            if best_ind.fitness > 0:
+                self.best_before = best_ind
             if best_ind.fitness > 0:
                 print(f"{math.log(best_ind.fitness, 10)}")
             else:
                 print(f"0 {best_ind.values}")
             self.population = self.new_generation(num_tour, num_parents, num_direct)
 
-        best_ind: IdleIndividual = max(self.population, key = self.fitness)
+        best_ind: IdleIndividual = self.best_before
         return best_ind, self.fitness(best_ind)
 
     def tournament_selection(self, n, k):
@@ -163,6 +164,8 @@ class IdleGeneticProblem():
         for _ in range(n):
             participants = random.sample(self.population, k)
             ind_selected = max(participants, key = self.fitness)
+            if ind_selected.fitness <= 0 and 0.1 > random.uniform(0, 1):
+                ind_selected = IdleIndividual(self.seconds, True)
             
             selected.append(ind_selected)
         return selected  
