@@ -1,4 +1,5 @@
 import random
+import copy
 import math
 from mine import Mine
 from game import Game
@@ -66,16 +67,26 @@ class IdleIndividual():
             prob: float = (1 - 1.005 ** (-index)) / 5**i
 
             if prob > random.uniform(0, 1):
-                self.values[index][i] += round(self.values[index][i] * 0.5)
+                case_zero: int = 0
+                if 0.1 > random.uniform(0, 1):
+                    case_zero = 1
+                mutation_range: int = round(self.values[index][i] * 1.5) + case_zero
+                ra: int = 0
+                if mutation_range > 0:
+                    ra = random.randint(-mutation_range, mutation_range)
+                self.values[index][i] += ra
+                self.values[index][i] = max(0, self.values[index][i]) # Positive numbers only
 
     def cross(self, other: 'IdleIndividual') -> 'IdleIndividual':
         l: int = len(self.values) # Is equal in both
         new_ind: IdleIndividual = IdleIndividual(self.seconds, False)
         for i in range(self.seconds):
+            aux_list: list[int] = []
             if 0.5 > random.uniform(0, 1):
-                new_ind.values[i] = self.values[i][0:l//3] + other.values[i][l//3:2*l//3] + self.values[i][2*l//3:l]
+                aux_list = self.values[i][0:l//3] + other.values[i][l//3:2*l//3] + self.values[i][2*l//3:l]
             else:
-                new_ind.values[i] = other.values[i][0:l//3] + self.values[i][l//3:2*l//3] + other.values[i][2*l//3:l]
+                aux_list = other.values[i][0:l//3] + self.values[i][l//3:2*l//3] + other.values[i][2*l//3:l]
+            new_ind.values[i] = copy.deepcopy(aux_list)
         return new_ind
 
 
@@ -85,14 +96,13 @@ class IdleIndividual():
 
         game: Game = Game()
         mult: float = 1;
-        for i, second_array in enumerate(self.values):
+        for second_array in self.values:
             game.increase_gold()
             for ii, num_mines in enumerate(second_array):
-                valid: tuple[int, bool] = game.new_mines(MINES[ii], num_mines)
-                if not valid[0]:
-                    mult *= 0.9 # Invalids have worse fitness
-                    self.values[i][ii] = valid[1]
-
+                valid: bool = game.new_mines(MINES[ii], num_mines)
+                if not valid:
+                    self.fitness = -1
+                    return self.fitness
 
         self.fitness = int(game.gold * mult)
         return self.fitness
@@ -138,6 +148,10 @@ class IdleGeneticProblem():
         for _ in range(num_gens):
             best_ind: IdleIndividual = max(self.population, key = self.fitness)
             self.best_before = best_ind
+            if best_ind.fitness > 0:
+                print(f"{math.log(best_ind.fitness, 10)}")
+            else:
+                print(f"0 {best_ind.values}")
             self.population = self.new_generation(num_tour, num_parents, num_direct)
 
         best_ind: IdleIndividual = max(self.population, key = self.fitness)
