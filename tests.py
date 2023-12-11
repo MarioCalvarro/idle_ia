@@ -1,4 +1,5 @@
 import multiprocessing
+import math
 from ia import IdleGeneticProblem
 
 duration = 900
@@ -10,23 +11,27 @@ prop_cr = 0.8
 def worker_function():
     return IdleGeneticProblem(population_size, duration).genetic_algorithm(k, num_gen, prop_cr)[1]
 
-if __name__ == '__main__':
-    num_processes = 100
+def main():
+    # Multiproceso
+    num_ej = 100
 
     # Create a Pool of processes
     pool = multiprocessing.Pool()
 
     # Apply worker function to each number using apply_async()
     results = []
-    for i in range(num_processes):
+    for _ in range(num_ej):
         result = pool.apply_async(worker_function, args=())
         results.append(result)
 
     # Get the return values from all the processes and do the mean
-    final_results = sum([res.get() for res in results]) / num_processes
+    final_results = sum([res.get() for res in results]) / num_ej
 
     # Close the pool
     pool.close()
     pool.join()
 
-    print("Results: ", final_results)
+    print(f"Results: {math.log(final_results, 10)}")
+
+if __name__ == '__main__':
+    main()

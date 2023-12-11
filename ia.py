@@ -156,7 +156,7 @@ class IdleGeneticProblem():
             self.population = self.new_generation(num_tour, num_parents, num_direct)
 
         best_ind: IdleIndividual = self.best_before
-        print(f"Final: {best_ind.fitness}")
+        print(f"Final: {math.log(best_ind.fitness, 10)}")
         return best_ind, self.fitness(best_ind)
 
     def tournament_selection(self, n, k):
