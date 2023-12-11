@@ -54,10 +54,10 @@ class IdleIndividual():
         prop_mut = 0.002
         number_mutations: int = round(len(self.values) * prop_mut)
         to_mutate: list[int] = []
-        
+
         for _ in range(number_mutations):
             to_mutate.append(random.randint(0, len(self.values) - 15))
-     
+
         for index in to_mutate:
             self.mutate_index(index)
 
@@ -149,13 +149,14 @@ class IdleGeneticProblem():
             best_ind: IdleIndividual = max(self.population, key = self.fitness)
             if best_ind.fitness > 0:
                 self.best_before = best_ind
-            if best_ind.fitness > 0:
-                print(f"{math.log(best_ind.fitness, 10)}")
-            else:
-                print(f"0 {best_ind.values}")
+            # if best_ind.fitness > 0:
+            #     print(f"{math.log(best_ind.fitness, 10)}")
+            # else:
+            #     print(f"0 {best_ind.values}")
             self.population = self.new_generation(num_tour, num_parents, num_direct)
 
         best_ind: IdleIndividual = self.best_before
+        print(f"Final: {best_ind.fitness}")
         return best_ind, self.fitness(best_ind)
 
     def tournament_selection(self, n, k):
@@ -166,7 +167,7 @@ class IdleGeneticProblem():
             ind_selected = max(participants, key = self.fitness)
             if ind_selected.fitness <= 0 and 0.1 > random.uniform(0, 1):
                 ind_selected = IdleIndividual(self.seconds, True)
-            
+
             selected.append(ind_selected)
         return selected  
 
