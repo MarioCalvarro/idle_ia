@@ -33,7 +33,7 @@ def main():
     pool.close()
     pool.join()
 
-    print(f"Results: {math.log(final_results, 10)}")
+    print(f"Final results: {math.log(final_results, 10)}")
 
 if __name__ == '__main__':
     main()
