@@ -10,20 +10,25 @@ MINES: list[Mine] = [Mine(15, 1), Mine(100, 5), Mine(300, 20), Mine(2000, 100), 
 #                 Cada elemento es un entero que representa el número de minas de ese
 #                 tipo que se compran en ese segundo
 #
-# Población inicial: Aleatoria con crecimiento exponencial
-# Función de evaluación: Si intenta comprar algo imposible -> lo hacemos posible, pero 
-#                       añadimos un multiplicador que disminuya el fitness al final
+# Decodificación: No hay. Es igual el fenotipo que el genotipo
+#
+# Población inicial: Aleatoria con crecimiento exponencial con respecto de los segundos 
+#                    e inversamente exponencial respecto del tipo de mina.
+#
+# Función de evaluación: Si intenta comprar algo imposible -> Directamente -1
 #                        Al llegar al final -> el total de oro que tenga al final
 # Operadores:
 #  * Selección: Por torneo probabilística
 #  * Cruze: Dividir cada vector de la matriz en tres y elegir que padre tendrá cada tercio
-#  * Mutación: Elegir un 0.2% de los segundos y sobre cada mutar con una probabilidad cada cantidad
-#              multiplicando por 0.5.
+#  * Mutación: Elegir un 0.2% de los segundos y sobre cada tipo de mina tenemos
+#              una probabilidad de sumar/restar una cantidad aleatoria con un rango
+#              entre 0 y 1.5 veces el valor que tenga en ese momento
 
 class IdleIndividual():
     BASE_RANGE_MUTATION = 1.04
 
     def __init__(self, seconds: int, initial: bool):
+        """Constructor"""
         self.seconds = seconds
         self.fitness: int = -2
         if initial:
@@ -51,6 +56,7 @@ class IdleIndividual():
 
 
     def mutation(self):
+        """Select which seconds are going to be mutated and do it"""
         prop_mut = 0.002
         number_mutations: int = round(len(self.values) * prop_mut)
         to_mutate: list[int] = []
@@ -63,6 +69,7 @@ class IdleIndividual():
 
 
     def mutate_index(self, index: int):
+        """Mutate the given second (index)"""
         for i in range(len(MINES)):
             prob: float = (1 - 1.005 ** (-index)) / 5**i
 
@@ -77,7 +84,9 @@ class IdleIndividual():
                 self.values[index][i] += ra
                 self.values[index][i] = max(0, self.values[index][i]) # Positive numbers only
 
+
     def cross(self, other: 'IdleIndividual') -> 'IdleIndividual':
+        """Cross the current individual with another and return a child"""
         l: int = len(self.values) # Is equal in both
         new_ind: IdleIndividual = IdleIndividual(self.seconds, False)
         for i in range(self.seconds):
@@ -91,6 +100,8 @@ class IdleIndividual():
 
 
     def evaluation(self) -> int:
+        """Evaluate the individual executing the game. Save the value for future
+           executions"""
         if self.fitness != -2:
             return self.fitness
 
@@ -122,16 +133,16 @@ class IdleGeneticProblem():
 
     def decode(self):
         """Return the phenotype given a genotype"""
+        return self
 
 
     def mutate(self, individual: IdleIndividual):
-        """Return a new individual from a previous one with
-            a posible mutation"""
+        """Mutate the given individual"""
         individual.mutation();
 
 
     def cross(self, individual1: IdleIndividual, individual2: IdleIndividual) -> list[IdleIndividual]:
-        """Return the cross of two individuals"""
+        """Return the cross (two childs) of two individuals"""
         return [individual1.cross(individual2), individual2.cross(individual1)]
 
 
@@ -149,15 +160,12 @@ class IdleGeneticProblem():
             best_ind: IdleIndividual = max(self.population, key = self.fitness)
             if best_ind.fitness > 0:
                 self.best_before = best_ind
-            # if best_ind.fitness > 0:
-            #     print(f"{math.log(best_ind.fitness, 10)}")
-            # else:
-            #     print(f"0 {best_ind.values}")
             self.population = self.new_generation(num_tour, num_parents, num_direct)
 
         best_ind: IdleIndividual = self.best_before
-        print(f"Final: {math.log(best_ind.fitness, 10)}")
+        print(f"Final: {math.log(best_ind.fitness, 10)}")   # Print the number of digits of the best solution found
         return best_ind, self.fitness(best_ind)
+
 
     def tournament_selection(self, n, k):
         """Selection by tournament of n individuals grouped in sets of k members"""
@@ -172,6 +180,7 @@ class IdleGeneticProblem():
         return selected  
 
     def cross_parents(self, parents: list[IdleIndividual]):
+        """Cross all the individuals in the given list and return the result"""
         l = []
         for i in range(len(parents)//2):    #asumimos que la población de la que partimos tiene tamaño par
             desc = self.cross(parents[2*i], parents[2*i + 1])   #El cruce se realiza con la función de cruce proporcionada por el propio problema genético
@@ -180,14 +189,18 @@ class IdleGeneticProblem():
             l.append(desc[1]) #y añadir cada par de descendientes a la nueva población
         return l
 
+
     def mutate_ind(self, generation: list[IdleIndividual]):
+        """Mutate all the individuals in a list and return a new list with them"""
         l = []
         for i in generation:
             self.mutate(i)
             l.append(i)
         return l
 
+
     def new_generation(self, num_tour: int, num_parents: int, num_direct: int) -> list[IdleIndividual]:
+        """Generate a new generation based on the current one"""
         parents = self.tournament_selection(num_parents, num_tour) 
         directs = self.tournament_selection(num_direct, num_tour)
         cruces =  self.cross_parents(parents)
@@ -197,7 +210,7 @@ class IdleGeneticProblem():
 
 
     def starting_generation(self):
-        """Return a new generation"""
+        """Return the starting generation"""
         l: list[IdleIndividual] = [] 
         for _ in range(self.size):  #Añadimos a la población size individuos
             l.append(IdleIndividual(self.seconds, True)) 

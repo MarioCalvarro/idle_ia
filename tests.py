@@ -2,6 +2,7 @@ import multiprocessing
 import math
 from ia import IdleGeneticProblem
 
+# Parameters of the algorithm
 duration = 900
 population_size = 20
 k = 3
@@ -12,8 +13,9 @@ def worker_function():
     return IdleGeneticProblem(population_size, duration).genetic_algorithm(k, num_gen, prop_cr)[1]
 
 def main():
+    """Execute paralelly a number of instances of the genetic algorithm"""
     # Multiproceso
-    num_ej = 100
+    num_ej = 100    # Number of executions
 
     # Create a Pool of processes
     pool = multiprocessing.Pool()
